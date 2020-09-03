@@ -12,8 +12,11 @@ class ExampleItem(scrapy.Item):
     # define the fields for your item here like:
     hotelname = scrapy.Field()
     hotelurl_ontripadvisor = scrapy.Field()
-    hotelurl = scrapy.Field()
-    amenities = scrapy.Field()
-    locations = scrapy.Field()
-    description = scrapy.Field()
-    other_names = scrapy.Field()
+    # hotelurl = scrapy.Field()
+    # amenities = scrapy.Field()
+    # locations = scrapy.Field()
+    # description = scrapy.Field()
+    # other_names = scrapy.Field()
+    #####
+    uniq_id = scrapy.Field()
+    country = scrapy.Field()
