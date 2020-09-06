@@ -5,12 +5,14 @@ import base64
 from scrapy.loader import ItemLoader
 from ..items import ExampleItem
 from pathlib import Path
+import csv
 
 # infile = Path('/Users/anastassiashaitarova/reAdvisor/DBs/hotels_Austria_urls.txt')
 # pathlist = Path('/Users/anastassiashaitarova/reAdvisor/DBs/').glob('**/hotels_*.txt')
-BASE_DIR = Path('/Users/anastassiashaitarova/reAdvisor/DBs/hotels_urls')
+BASE_DIR = Path('/Users/anastassiashaitarova/reAdvisor/data/urls/hotels_urls')
 countries = re.compile(r'/hotels_(Ireland|New|UK|Can|Australia|USA).*\.txt')
-# countries = re.compile(r'/hotels_Ireland.*\.txt')
+# countries = re.compile(r'/hotels_Austria.*\.txt')
+outfile = format('/Users/anastassiashaitarova/reAdvisor/data/output/bad_urls.csv')
 
 
 class ExampleSpider(scrapy.Spider):
@@ -26,31 +28,30 @@ class ExampleSpider(scrapy.Spider):
                     for url in inf.readlines():
                         self.start_urls.append(url.strip())
 
+    def start_requests(self):
+        for u in self.start_urls:
+            yield scrapy.Request(u,
+                                 callback=self.parse,
+                                 meta=dict(main_url=u),
+                                 dont_filter=True)
+
+    def errback_page(self, failure):
+        yield dict(main_url=failure.request.meta['main_url'],)
+        # print('FAILURE', failure.request.meta['main_url'])
+
     def parse(self, response):
         current_url = response.url
 
-        domain_pattern = re.compile(r'(https://\w+\.tripadvisor.+)/')
-        domain = domain_pattern.match(current_url).group(1)
-
-        id_pattern = re.compile(r'.+(d\d+).+')
-        id = id_pattern.match(current_url).group(1)
-
-        true_url = response.xpath('//div[@data-blcontact="URL_HOTEL "]/a/@data-encoded-url').get()
-        url_pattern = re.compile(r'.+(/.+)$')
-        if true_url:
-            my_url = base64.b64decode(true_url.encode())
-            full_url = domain + url_pattern.match(my_url.decode()).group(1)
-        else:
-            full_url = "not available"
-
-        country = response.xpath(
-            '//div[@class="_39sLqIkw" and text()="LOCATION"]/following::div[1]/text()').get()
-        print(country)
-
         l = ItemLoader(item=ExampleItem(), response=response)
-        l.add_xpath('hotelname', '//h1[@id="HEADING"]/text()')
-        l.add_value('hotelurl_ontripadvisor', response.url)
-        l.add_value('uniq_id', id)
-        l.add_value('country', country)
-        #
-        yield l.load_item()
+
+        id_patternD = re.compile(r'.+(d\d+).+')
+        # id_patternG = re.compile(r'.+(g\d+).+')
+
+        try:
+            id = id_patternD.match(current_url).group(1)
+        except AttributeError:
+            new_url = response.meta['main_url']
+
+            l.add_value('bad_url', response.url)
+            l.add_value('new_url', new_url)
+            yield l.load_item()
